@@ -183,34 +183,37 @@ export const MODEL_INFO = {
 5. **View Results**: See extracted text with streaming updates
 6. **Export**: Copy to clipboard or download as text/JSON
 
-## Recommended Scripts for Development
+## Development
 
-This project includes scripts to run the Genkit runtime and the Next.js frontend in parallel, which is the recommended setup for development.
+For the best development experience, we recommend running the Next.js frontend and the Genkit runtime in separate terminal sessions. This allows you to see logs from both processes independently and ensures the Genkit Developer UI functions correctly.
 
-### Running Genkit DevUI with Frameworks (e.g., Next.js)
+### Running the Development Environment
 
-To ensure a smooth developer experience, you should run two processes side-by-side in separate terminals:
+1.  **Start the Genkit Runtime:**
 
-```bash
-# Terminal 1: Genkit runtime for DevUI
-npm run genkit:watch
+    Open a terminal and run the following command to start the Genkit runtime with hot-reloading. This will also launch the Genkit Developer UI.
 
-# Terminal 2: Your app frontend
-npm run dev
-```
+    ```bash
+    npm run genkit:watch
+    ```
 
-- `npm run genkit:watch`: Starts the Genkit runtime in watch mode, so it will automatically restart when you make changes to your Genkit configuration or flows. The Genkit Developer UI will be available at [http://localhost:4000](http://localhost:4000).
-- `npm run dev`: Starts the Next.js development server. Your application will be available at [http://localhost:9002](http://localhost:9002).
+    The Genkit Developer UI will be available at `http://localhost:4000`.
 
-### Clarify What DevUI Connects To
+2.  **Start the Frontend Application:**
 
-The Genkit DevUI connects to the **Genkit runtime**, not the frontend server. It is essential that Genkit is running in `dev` mode (via `genkit start`) for the DevUI features to work correctly.
+    In a second terminal, run the following command to start the Next.js development server.
 
-### Warn Against `genkit start -- npm run dev`
+    ```bash
+    npm run dev
+    ```
 
-This approach doesn't work reliably with apps like Next.js because `npm run dev` starts its own process that doesn’t expose Genkit runtime hooks properly. Using this command can cause the "Waiting to connect to Genkit runtime..." issue in the DevUI.
+    Your application will be available at `http://localhost:9002`.
+
+**Note:** It is important to run the Genkit runtime (`genkit start`) separately from the frontend development server (`npm run dev`). Attempting to run them together with a command like `genkit start -- npm run dev` can lead to connection issues with the Genkit Developer UI, as the Next.js server runs in its own process and may not expose the necessary hooks for the UI to connect to the runtime.
 
 ### Building for Production
+
+To create a production-ready build of the application, run the following commands:
 
 ```bash
 npm run build
