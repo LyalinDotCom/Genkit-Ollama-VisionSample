@@ -1,6 +1,6 @@
 # Vision Text Extractor - Genkit + Ollama + Next.js
 
-A modern web application for extracting text from images using Google Genkit and vision models served by Ollama. This sample demonstrates how to build production-ready AI applications with local language models, optimized for developer laptops.
+A sample web application for extracting text from images using Google Genkit and vision models served by Ollama. This project demonstrates how to integrate these technologies to build AI applications with local language models, optimized for developer laptops.
 
 ![Vision Text Extractor Screenshot](./public/screenshot.png)
 
@@ -204,9 +204,9 @@ For the best development experience, we recommend running the Next.js frontend a
 
 **Note:** It is important to run the Genkit runtime (`genkit start`) separately from the frontend development server (`npm run dev`). Attempting to run them together with a command like `genkit start -- npm run dev` can lead to connection issues with the Genkit Developer UI, as the Next.js server runs in its own process and may not expose the necessary hooks for the UI to connect to the runtime.
 
-### Building for Production
+### Creating a Standalone Build
 
-To create a production-ready build of the application, run the following commands:
+To create a standalone build of the application, run the following commands:
 
 ```bash
 npm run build
