@@ -43,10 +43,8 @@ export const extractTextFromImage = ai.defineFlow(
 
       console.log(`Processing image (${(imageSize / 1024).toFixed(2)}KB) with model: ${input.model}`);
 
-      // Send initial status
-      sendChunk('Starting text extraction...\n');
-
-      const response = await ai.generate({
+      // Generate with streaming
+      const { response, stream } = await ai.generateStream({
         model: ollama.model(input.model),
         prompt: [
           { text: input.prompt },
@@ -57,7 +55,14 @@ export const extractTextFromImage = ai.defineFlow(
         },
       });
 
-      const extractedText = response.text;
+      // Stream the actual generated text
+      for await (const chunk of stream) {
+        sendChunk(chunk.text);
+      }
+
+      // Wait for the final response
+      const finalResponse = await response;
+      const extractedText = finalResponse.text;
       const processingTime = Date.now() - startTime;
 
       // Format output based on requested format
@@ -80,8 +85,7 @@ export const extractTextFromImage = ai.defineFlow(
         formattedText = `# Extracted Text\n\n${extractedText}`;
       }
 
-      // Send final chunk
-      sendChunk(`\nExtraction complete! Processing time: ${processingTime}ms`);
+      // Don't send status messages - only the extracted text is streamed
 
       return {
         extractedText: formattedText,

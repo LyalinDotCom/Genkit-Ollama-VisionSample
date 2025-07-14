@@ -24,6 +24,7 @@ export default function Home() {
   const [metadata, setMetadata] = useState<Record<string, any>>({});
   const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [processingStatus, setProcessingStatus] = useState<string>('');
 
   const handleExtract = async () => {
     if (!selectedImage) return;
@@ -34,9 +35,12 @@ export default function Home() {
     setStreamingText('');
     setConfidence('');
     setMetadata({});
+    setProcessingStatus('Preparing image...');
 
     try {
       const base64Image = await fileToBase64(selectedImage);
+      
+      setProcessingStatus('Sending to vision model...');
       
       // Use streamFlow from Genkit client
       const { stream, output } = streamFlow<typeof extractTextFromImage>({
@@ -49,6 +53,8 @@ export default function Home() {
         }
       });
 
+      setProcessingStatus('Extracting text...');
+
       // Process the stream
       for await (const chunk of stream) {
         setStreamingText(prev => prev + chunk);
@@ -59,6 +65,7 @@ export default function Home() {
       setExtractedText(result.extractedText);
       setConfidence(result.metadata?.confidence || 'High');
       setMetadata(result.metadata || {});
+      setProcessingStatus('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to extract text');
     } finally {
@@ -110,6 +117,15 @@ export default function Home() {
                       )}
                     </button>
                   </div>
+                  
+                  {processingStatus && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {processingStatus}
+                      </p>
+                    </div>
+                  )}
                   
                   <details className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                     <summary className="cursor-pointer font-medium text-gray-900 dark:text-white">
