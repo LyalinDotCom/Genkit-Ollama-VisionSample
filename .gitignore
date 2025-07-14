@@ -71,3 +71,6 @@ logs/
 
 # Optional eslint cache
 .eslintcache
+
+# Genkit
+.genkit/
