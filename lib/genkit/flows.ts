@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ai, VISION_MODELS, type VisionModel } from './config';
-import axios from 'axios';
+import { generate } from 'genkit';
 
 // Input validation schema
 export const imageExtractionInputSchema = z.object({
@@ -29,137 +29,133 @@ export const imageExtractionOutputSchema = z.object({
 });
 
 // Main image text extraction flow
-export const extractTextFromImage = ai.defineFlow({
-  name: 'extractTextFromImage',
-  inputSchema: imageExtractionInputSchema,
-  outputSchema: imageExtractionOutputSchema,
-  streamSchema: z.string(), // Enable streaming
-}, async (input, { sendChunk }) => {
-  const startTime = Date.now();
-  
-  try {
-    // Calculate image size from base64
-    const imageSize = Buffer.from(input.imageBase64, 'base64').length;
-    
-    // Validate image size (max 10MB)
-    if (imageSize > 10 * 1024 * 1024) {
-      throw new Error('Image size exceeds 10MB limit');
-    }
-    
-    console.log(`Processing image (${(imageSize / 1024).toFixed(2)}KB) with model: ${input.model}`);
-    
-    // Send initial status
-    sendChunk('Starting text extraction...\n');
-    
-    // Call Ollama API directly for better control
-    const response = await axios.post(
-      `${process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434'}/api/generate`,
-      {
-        model: input.model,
-        prompt: input.prompt,
-        images: [input.imageBase64],
-        stream: false,
-        options: {
+export const extractTextFromImage = ai.defineFlow(
+  {
+    name: 'extractTextFromImage',
+    inputSchema: imageExtractionInputSchema,
+    outputSchema: imageExtractionOutputSchema,
+    streamSchema: z.string(), // Enable streaming
+  },
+  async (input, { sendChunk }) => {
+    const startTime = Date.now();
+
+    try {
+      // Calculate image size from base64
+      const imageSize = Buffer.from(input.imageBase64, 'base64').length;
+
+      // Validate image size (max 10MB)
+      if (imageSize > 10 * 1024 * 1024) {
+        throw new Error('Image size exceeds 10MB limit');
+      }
+
+      console.log(`Processing image (${(imageSize / 1024).toFixed(2)}KB) with model: ${input.model}`);
+
+      // Send initial status
+      sendChunk('Starting text extraction...\n');
+
+      const response = await generate({
+        model: `ollama/${input.model}`,
+        prompt: [
+          { text: input.prompt },
+          { image: { base64: input.imageBase64 } },
+        ],
+        config: {
           temperature: 0.3,
-          num_predict: 2048,
         },
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
+      });
+
+      const extractedText = response.text();
+      const processingTime = Date.now() - startTime;
+
+      // Format output based on requested format
+      let formattedText = extractedText;
+      if (input.outputFormat === 'json') {
+        try {
+          formattedText = JSON.stringify(
+            {
+              text: extractedText,
+              lines: extractedText.split('\n').filter((line: string) => line.trim()),
+              wordCount: extractedText.split(/\s+/).filter((word: string) => word).length,
+            },
+            null,
+            2
+          );
+        } catch {
+          formattedText = extractedText;
+        }
+      } else if (input.outputFormat === 'markdown') {
+        formattedText = `# Extracted Text\n\n${extractedText}`;
+      }
+
+      // Send final chunk
+      sendChunk(`\nExtraction complete! Processing time: ${processingTime}ms`);
+
+      return {
+        extractedText: formattedText,
+        metadata: {
+          model: input.model,
+          processingTime,
+          imageSize,
+          confidence: 'High',
         },
-        timeout: 120000,
+      };
+    } catch (error) {
+      console.error('Error processing image:', error);
+
+      let errorMessage = 'Failed to extract text from image';
+      if (error instanceof Error) {
+        errorMessage = error.message;
       }
-    );
-    
-    const extractedText = response.data.response;
-    const processingTime = Date.now() - startTime;
-    
-    // Format output based on requested format
-    let formattedText = extractedText;
-    if (input.outputFormat === 'json') {
-      try {
-        formattedText = JSON.stringify({
-          text: extractedText,
-          lines: extractedText.split('\n').filter((line: string) => line.trim()),
-          wordCount: extractedText.split(/\s+/).filter((word: string) => word).length,
-        }, null, 2);
-      } catch {
-        formattedText = extractedText;
-      }
-    } else if (input.outputFormat === 'markdown') {
-      formattedText = `# Extracted Text\n\n${extractedText}`;
+
+      return {
+        extractedText: '',
+        metadata: {
+          model: input.model,
+          processingTime: Date.now() - startTime,
+          imageSize: 0,
+          confidence: 'Error: ' + errorMessage,
+        },
+      };
     }
-    
-    // Send final chunk
-    sendChunk(`\nExtraction complete! Processing time: ${processingTime}ms`);
-    
-    return {
-      extractedText: formattedText,
-      metadata: {
-        model: input.model,
-        processingTime,
-        imageSize,
-        confidence: 'High',
-      },
-    };
-    
-  } catch (error) {
-    console.error('Error processing image:', error);
-    
-    let errorMessage = 'Failed to extract text from image';
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNREFUSED') {
-        errorMessage = 'Ollama server is not running. Please start Ollama with: ollama serve';
-      } else if (error.response?.status === 404) {
-        errorMessage = `Model ${input.model} not found. Please pull it with: ollama pull ${input.model}`;
-      }
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    
-    return {
-      extractedText: '',
-      metadata: {
-        model: input.model,
-        processingTime: Date.now() - startTime,
-        imageSize: 0,
-        confidence: 'Error: ' + errorMessage,
-      },
-    };
   }
-});
+);
 
 // Check Ollama status flow
-export const checkOllamaStatus = ai.defineFlow({
-  name: 'checkOllamaStatus',
-  outputSchema: z.object({
-    isRunning: z.boolean(),
-    models: z.array(z.string()),
-    error: z.string().optional(),
-  }),
-}, async () => {
-  try {
-    const response = await axios.get(
-      `${process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434'}/api/tags`,
-      { timeout: 5000 }
-    );
-    
-    const models = response.data.models
-      ?.map((m: any) => m.name)
-      ?.filter((name: string) => 
-        Object.values(VISION_MODELS).includes(name as VisionModel)
-      ) || [];
-    
-    return {
-      isRunning: true,
-      models,
-    };
-  } catch (error) {
-    return {
-      isRunning: false,
-      models: [],
-      error: 'Cannot connect to Ollama. Make sure it is running.',
-    };
+export const checkOllamaStatus = ai.defineFlow(
+  {
+    name: 'checkOllamaStatus',
+    outputSchema: z.object({
+      isRunning: z.boolean(),
+      models: z.array(z.string()),
+      error: z.string().optional(),
+    }),
+  },
+  async () => {
+    try {
+      const response = await fetch(
+        `${process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434'}/api/tags`,
+        { method: 'GET', signal: AbortSignal.timeout(5000) }
+      );
+
+      if (!response.ok) {
+        throw new Error('Cannot connect to Ollama. Make sure it is running.');
+      }
+
+      const data = await response.json();
+      const models = data.models
+        ?.map((m: any) => m.name)
+        ?.filter((name: string) => Object.values(VISION_MODELS).includes(name as VisionModel)) || [];
+
+      return {
+        isRunning: true,
+        models,
+      };
+    } catch (error) {
+      return {
+        isRunning: false,
+        models: [],
+        error: 'Cannot connect to Ollama. Make sure it is running.',
+      };
+    }
   }
-});
+);

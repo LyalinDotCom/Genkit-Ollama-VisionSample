@@ -1,14 +1,5 @@
-import { genkit } from 'genkit';
+import { configureGenkit, genkit } from 'genkit';
 import { ollama } from 'genkitx-ollama';
-
-// Initialize Genkit with Ollama plugin
-export const ai = genkit({
-  plugins: [
-    ollama({
-      serverAddress: process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434',
-    }),
-  ],
-});
 
 // Supported vision models
 export const VISION_MODELS = {
@@ -20,7 +11,26 @@ export const VISION_MODELS = {
   GEMMA3_27B: 'gemma3:27b',
 } as const;
 
-export type VisionModel = typeof VISION_MODELS[keyof typeof VISION_MODELS];
+export type VisionModel = (typeof VISION_MODELS)[keyof typeof VISION_MODELS];
+
+// Initialize Genkit with Ollama plugin and models
+export const ai = configureGenkit({
+  plugins: [
+    ollama({
+      serverAddress: process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434',
+      models: [
+        { name: VISION_MODELS.LLAVA_7B, type: 'generate' },
+        { name: VISION_MODELS.LLAVA_13B, type: 'generate' },
+        { name: VISION_MODELS.LLAVA_34B, type: 'generate' },
+        { name: VISION_MODELS.GEMMA3_4B, type: 'generate' },
+        { name: VISION_MODELS.GEMMA3_12B, type: 'generate' },
+        { name: VISION_MODELS.GEMMA3_27B, type: 'generate' },
+      ],
+    }),
+  ],
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
+});
 
 // Model metadata for UI
 export const MODEL_INFO = {

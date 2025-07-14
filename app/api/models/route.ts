@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { MODEL_INFO } from '@/lib/genkit/config';
-import { checkOllamaStatus } from '@/lib/genkit/flows';
+import { checkOllamaStatus } from '@/lib/ollama';
 
 export async function GET() {
   try {

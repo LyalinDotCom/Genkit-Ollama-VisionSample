@@ -22,14 +22,14 @@ export function ModelSelector({ onModelSelect, currentModel }: ModelSelectorProp
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [savedModel, setSavedModel] = useLocalStorage('selectedModel', 'gemma3:4b');
+  const [savedModel, setSavedModel] = useLocalStorage('selectedModel', '');
 
   useEffect(() => {
     fetchModels();
   }, []);
 
   useEffect(() => {
-    if (savedModel && models.some(m => m.id === savedModel)) {
+    if (savedModel && models.some(m => m.id === savedModel && m.available)) {
       onModelSelect(savedModel);
     }
   }, [savedModel, models]);

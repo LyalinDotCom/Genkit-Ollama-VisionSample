@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [selectedModel, setSelectedModel] = useState('gemma3:4b');
+  const [selectedModel, setSelectedModel] = useState('');
   const [extractionPrompt, setExtractionPrompt] = useState(
     'Extract all readable text from this image. Include all visible text elements.'
   );
@@ -126,7 +126,7 @@ export default function Home() {
                     
                     <button
                       onClick={handleExtract}
-                      disabled={isExtracting}
+                      disabled={isExtracting || !selectedImage || !selectedModel}
                       className="h-fit self-end py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isExtracting ? (

@@ -86,18 +86,28 @@ genkit-vision-nextjs/
 
 ### Genkit Integration
 
-This app uses Google Genkit for AI orchestration with flows running on Next.js API routes:
+This app uses the `genkitx-ollama` plugin to integrate with local vision models. The core logic is defined in a Genkit flow:
 
 ```typescript
 // lib/genkit/flows.ts
-export const extractTextFromImage = ai.defineFlow({
-  name: 'extractTextFromImage',
-  inputSchema: imageExtractionInputSchema,
-  outputSchema: imageExtractionOutputSchema,
-  streamSchema: z.string(),
-}, async (input, { sendChunk }) => {
-  // Call Ollama API directly for better control
-});
+import { generate } from 'genkit';
+
+export const extractTextFromImage = ai.defineFlow(
+  {
+    name: 'extractTextFromImage',
+    // ... schema definitions
+  },
+  async (input) => {
+    const response = await generate({
+      model: `ollama/${input.model}`,
+      prompt: [
+        { text: input.prompt },
+        { image: { base64: input.imageBase64 } },
+      ],
+    });
+    return { extractedText: response.text() };
+  }
+);
 ```
 
 ### API Routes
@@ -144,27 +154,24 @@ OLLAMA_API_URL=http://localhost:11434
 
 ### Model Configuration
 
-Models are configured in `lib/genkit/config.ts`:
+Models are defined in `lib/genkit/config.ts` using the `genkitx-ollama` plugin:
 
 ```typescript
-export const MODEL_INFO = {
-  'gemma3:4b': {
-    name: 'Gemma 3 4B',
-    description: 'Latest Google model with 128K context window',
-    size: '3.3GB',
-  },
-  'gemma3:12b': {
-    name: 'Gemma 3 12B',
-    description: 'Better accuracy for complex documents',
-    size: '8.1GB',
-  },
-  'gemma3:27b': {
-    name: 'Gemma 3 27B',
-    description: 'Highest accuracy for challenging layouts',
-    size: '17GB',
-  },
-  // ... more models
-};
+// lib/genkit/config.ts
+import { configureGenkit, genkit } from 'genkit';
+import { ollama } from 'genkitx-ollama';
+
+export const ai = configureGenkit({
+  plugins: [
+    ollama({
+      serverAddress: 'http://127.0.0.1:11434',
+      models: [
+        { name: 'gemma3:4b', type: 'generate' },
+        // ... other models
+      ],
+    }),
+  ],
+});
 ```
 
 ## Usage
