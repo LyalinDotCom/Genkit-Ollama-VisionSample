@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 9002",
+    "genkit:dev": "genkit start -- tsx lib/genkit/flows.ts",
+    "genkit:watch": "genkit start -- tsx --watch lib/genkit/flows.ts",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@genkit-ai/next": "^1.14.1",
@@ -30,6 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
+    "tsx": "^4.16.2",
     "typescript": "^5"
   }
 }
