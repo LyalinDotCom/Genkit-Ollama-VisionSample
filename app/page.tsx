@@ -9,6 +9,8 @@ import { PromptInput } from './components/PromptInput';
 import { ExtractionResults } from './components/ExtractionResults';
 import { fileToBase64 } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { streamFlow } from '@genkit-ai/next/client';
+import type { extractTextFromImage } from '@/lib/genkit/flows';
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -36,64 +38,27 @@ export default function Home() {
     try {
       const base64Image = await fileToBase64(selectedImage);
       
-      const response = await fetch('/api/extract-text', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Use streamFlow from Genkit client
+      const { stream, output } = streamFlow<typeof extractTextFromImage>({
+        url: '/api/extract-text',
+        input: {
           model: selectedModel,
           imageBase64: base64Image,
           prompt: extractionPrompt,
-        }),
+          outputFormat: 'text',
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.details) {
-          throw new Error(`${errorData.error}\n${errorData.details}`);
-        } else {
-          throw new Error(errorData.error || `Failed to extract text: ${response.statusText}`);
-        }
+      // Process the stream
+      for await (const chunk of stream) {
+        setStreamingText(prev => prev + chunk);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response body');
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              continue;
-            }
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.chunk) {
-                setStreamingText(prev => prev + parsed.chunk);
-              } else if (parsed.extractedText) {
-                setExtractedText(parsed.extractedText);
-                setConfidence(parsed.metadata?.confidence || 'medium');
-                setMetadata(parsed.metadata || {});
-              }
-            } catch (e) {
-              console.error('Failed to parse streaming data:', e);
-            }
-          }
-        }
-      }
+      // Wait for the final output
+      const result = await output;
+      setExtractedText(result.extractedText);
+      setConfidence(result.metadata?.confidence || 'High');
+      setMetadata(result.metadata || {});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to extract text');
     } finally {

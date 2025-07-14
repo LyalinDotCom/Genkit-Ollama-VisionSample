@@ -115,6 +115,7 @@ export const extractTextFromImage = ai.defineFlow(
 
 // Import the checkOllamaStatus function from ollama.ts
 import { checkOllamaStatus as checkOllamaStatusFn } from '../ollama';
+import { getModelDisplayInfo } from './config';
 
 // Check Ollama status flow
 export const checkOllamaStatus = ai.defineFlow(
@@ -128,5 +129,61 @@ export const checkOllamaStatus = ai.defineFlow(
   },
   async () => {
     return await checkOllamaStatusFn();
+  }
+);
+
+// Get available models flow
+export const getAvailableModels = ai.defineFlow(
+  {
+    name: 'getAvailableModels',
+    outputSchema: z.object({
+      models: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string(),
+        size: z.string(),
+        available: z.boolean(),
+        recommended: z.boolean(),
+      })),
+      ollamaStatus: z.object({
+        isRunning: z.boolean(),
+        models: z.array(z.string()),
+        error: z.string().optional(),
+      }),
+    }),
+  },
+  async () => {
+    // Check which models are actually available
+    const status = await checkOllamaStatusFn();
+    
+    // Build model list from discovered models
+    const models = status.models.map(modelId => {
+      const displayInfo = getModelDisplayInfo(modelId);
+      
+      // Get size from Ollama API if available
+      const sizeInfo = modelId.includes(':') ? modelId.split(':')[1] : '';
+      
+      return {
+        id: modelId,
+        name: displayInfo.name,
+        description: displayInfo.description,
+        size: sizeInfo || 'Unknown',
+        available: true,
+        // Prefer gemma3 models
+        recommended: modelId.toLowerCase().startsWith('gemma3'),
+      };
+    });
+    
+    // Sort models: recommended first, then alphabetically
+    models.sort((a, b) => {
+      if (a.recommended && !b.recommended) return -1;
+      if (!a.recommended && b.recommended) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    
+    return {
+      models,
+      ollamaStatus: status,
+    };
   }
 );

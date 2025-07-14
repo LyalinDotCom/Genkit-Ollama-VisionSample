@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, AlertCircle, CheckCircle, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLocalStorage } from '@/app/hooks/useLocalStorage';
+import { runFlow } from '@genkit-ai/next/client';
+import type { getAvailableModels } from '@/lib/genkit/flows';
 
 interface Model {
   id: string;
@@ -36,9 +38,10 @@ export function ModelSelector({ onModelSelect, currentModel }: ModelSelectorProp
 
   const fetchModels = async () => {
     try {
-      const response = await fetch('/api/models');
-      const data = await response.json();
-      setModels(data.models);
+      const result = await runFlow<typeof getAvailableModels>({
+        url: '/api/models',
+      });
+      setModels(result.models);
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch models:', error);

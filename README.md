@@ -115,33 +115,41 @@ export const extractTextFromImage = ai.defineFlow(
 
 ### API Routes
 
-The Genkit flow is exposed as a Next.js API route:
+The Genkit flow is exposed as a Next.js API route using the `appRoute` helper:
 
 ```typescript
 // app/api/extract-text/route.ts
+import { appRoute } from '@genkit-ai/next';
 import { extractTextFromImage } from '@/lib/genkit/flows';
-import { appRoute } from '@genkit-ai/app-server';
 
 export const POST = appRoute(extractTextFromImage);
 ```
 
 ### Frontend Integration
 
-The React frontend consumes the API with streaming support:
+The React frontend uses Genkit's client SDK for type-safe API calls with streaming:
 
 ```typescript
-const response = await fetch('/api/extract-text', {
-  method: 'POST',
-  body: JSON.stringify({
+import { streamFlow } from '@genkit-ai/next/client';
+import type { extractTextFromImage } from '@/lib/genkit/flows';
+
+// Use streamFlow for streaming responses
+const { stream, output } = streamFlow<typeof extractTextFromImage>({
+  url: '/api/extract-text',
+  input: {
     model: selectedModel,
     imageBase64: base64Image,
     prompt: extractionPrompt,
-  }),
+  }
 });
 
-// Handle streaming response
-const reader = response.body?.getReader();
-// ... process chunks
+// Process streaming chunks
+for await (const chunk of stream) {
+  console.log(chunk);
+}
+
+// Get final result
+const result = await output;
 ```
 
 ## Configuration
