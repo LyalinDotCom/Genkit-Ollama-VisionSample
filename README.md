@@ -7,7 +7,7 @@ A sample web application for extracting text from images using Google Genkit and
 ## Features
 
 - 🖼️ **Multiple Input Methods**: Upload images via drag-and-drop, file selection, URL, or paste from clipboard
-- 🤖 **Multiple Vision Models**: Support for Gemma 3 (4B, 12B, 27B), LLaVA, and other vision models available through Ollama
+- 🤖 **Multiple Vision Models**: Support for LLaVA (7B, 13B, 34B) and Gemma 3 (27B) vision models through Ollama
 - 🎨 **Modern UI**: Compact layout with side-by-side input/output, dark mode support
 - ⚡ **Real-time Streaming**: See results as they're generated with live updates
 - 🔧 **Customizable Prompts**: Pre-built templates for common use cases and custom prompt support
@@ -15,6 +15,7 @@ A sample web application for extracting text from images using Google Genkit and
 - 💾 **Export Options**: Download or copy extracted text with one click
 - 🔍 **Compact Image Preview**: Zoom and rotate images without excessive scrolling
 - 📌 **Sticky Results Panel**: Results stay visible while you adjust settings
+- 🚨 **Smart Error Handling**: Clear messages when Ollama is not running or models are not installed
 
 
 
@@ -22,20 +23,21 @@ A sample web application for extracting text from images using Google Genkit and
 
 - Node.js 18.x or later
 - [Ollama](https://ollama.com) installed and running
-- At least one vision-capable model installed (e.g., `gemma3:4b`)
+- At least one vision-capable model installed (e.g., `llava:7b`)
 
 ### Installing Vision Models
 
 ```bash
-# Install recommended Gemma 3 vision models (default)
-ollama pull gemma3:4b      # Fast, good quality, 3.3GB (recommended)
-ollama pull gemma3:12b     # Better quality, 8.1GB
-ollama pull gemma3:27b     # Best quality, 17GB
+# Install recommended LLaVA vision model (default)
+ollama pull llava:7b       # Fast, good quality, 4.7GB (recommended)
 
-# Alternative LLaVA models
-ollama pull llava:7b       # Fast alternative, 4.1GB
-ollama pull llava:13b      # Better LLaVA model, 7.3GB
+# Alternative models
+ollama pull llava:13b      # Better accuracy, 7.3GB
+ollama pull llava:34b      # Best accuracy, 20GB
+ollama pull gemma3:27b     # Google's large model, 17GB
 ```
+
+**Note:** This sample has been tested with LLaVA and Gemma models. Other vision-capable models available in Ollama should work as well. The app will automatically detect all installed models that support vision capabilities.
 
 ## Installation
 
@@ -90,7 +92,8 @@ This app uses the `genkitx-ollama` plugin to integrate with local vision models.
 
 ```typescript
 // lib/genkit/flows.ts
-import { generate } from 'genkit';
+import { ai } from './config';
+import { ollama } from 'genkitx-ollama';
 
 export const extractTextFromImage = ai.defineFlow(
   {
@@ -98,14 +101,14 @@ export const extractTextFromImage = ai.defineFlow(
     // ... schema definitions
   },
   async (input) => {
-    const response = await generate({
-      model: `ollama/${input.model}`,
+    const response = await ai.generate({
+      model: ollama.model(input.model),
       prompt: [
         { text: input.prompt },
-        { image: { base64: input.imageBase64 } },
+        { media: { contentType: 'image/jpeg', url: `data:image/jpeg;base64,${input.imageBase64}` } },
       ],
     });
-    return { extractedText: response.text() };
+    return { extractedText: response.text };
   }
 );
 ```
@@ -154,25 +157,23 @@ OLLAMA_API_URL=http://localhost:11434
 
 ### Model Configuration
 
-Models are defined in `lib/genkit/config.ts` using the `genkitx-ollama` plugin:
+The app uses the `genkitx-ollama` plugin with dynamic model discovery:
 
 ```typescript
 // lib/genkit/config.ts
-import { configureGenkit, genkit } from 'genkit';
+import { genkit } from 'genkit';
 import { ollama } from 'genkitx-ollama';
 
-export const ai = configureGenkit({
+export const ai = genkit({
   plugins: [
     ollama({
-      serverAddress: 'http://127.0.0.1:11434',
-      models: [
-        { name: 'gemma3:4b', type: 'generate' },
-        // ... other models
-      ],
+      serverAddress: process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434',
     }),
   ],
 });
 ```
+
+The app automatically discovers all vision-capable models installed in Ollama. No hardcoded model list is required!
 
 ## Usage
 

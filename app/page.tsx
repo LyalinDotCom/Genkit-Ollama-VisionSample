@@ -49,7 +49,12 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to extract text: ${response.statusText}`);
+        const errorData = await response.json();
+        if (errorData.details) {
+          throw new Error(`${errorData.error}\n${errorData.details}`);
+        } else {
+          throw new Error(errorData.error || `Failed to extract text: ${response.statusText}`);
+        }
       }
 
       const reader = response.body?.getReader();
@@ -128,6 +133,7 @@ export default function Home() {
                       onClick={handleExtract}
                       disabled={isExtracting || !selectedImage || !selectedModel}
                       className="h-fit self-end py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      title={!selectedModel ? 'Please select a model first' : undefined}
                     >
                       {isExtracting ? (
                         <>

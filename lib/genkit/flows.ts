@@ -1,18 +1,11 @@
 import { z } from 'zod';
-import { ai, VISION_MODELS, type VisionModel } from './config';
-import { generate } from 'genkit';
+import { ai } from './config';
+import { ollama } from 'genkitx-ollama';
 
 // Input validation schema
 export const imageExtractionInputSchema = z.object({
   imageBase64: z.string().describe('Base64 encoded image data'),
-  model: z.enum([
-    VISION_MODELS.LLAVA_7B,
-    VISION_MODELS.LLAVA_13B,
-    VISION_MODELS.LLAVA_34B,
-    VISION_MODELS.GEMMA3_4B,
-    VISION_MODELS.GEMMA3_12B,
-    VISION_MODELS.GEMMA3_27B,
-  ]).optional().default(VISION_MODELS.GEMMA3_4B).describe('Vision model to use'),
+  model: z.string().describe('Vision model to use'),
   prompt: z.string().optional().default('Extract all text from this image. Include any handwritten text, printed text, or text in UI elements. Format the output clearly.').describe('Custom prompt for text extraction'),
   outputFormat: z.enum(['text', 'json', 'markdown']).optional().default('text').describe('Output format for extracted text'),
 });
@@ -53,18 +46,18 @@ export const extractTextFromImage = ai.defineFlow(
       // Send initial status
       sendChunk('Starting text extraction...\n');
 
-      const response = await generate({
-        model: `ollama/${input.model}`,
+      const response = await ai.generate({
+        model: ollama.model(input.model),
         prompt: [
           { text: input.prompt },
-          { image: { base64: input.imageBase64 } },
+          { media: { contentType: 'image/jpeg', url: `data:image/jpeg;base64,${input.imageBase64}` } },
         ],
         config: {
           temperature: 0.3,
         },
       });
 
-      const extractedText = response.text();
+      const extractedText = response.text;
       const processingTime = Date.now() - startTime;
 
       // Format output based on requested format
@@ -120,6 +113,9 @@ export const extractTextFromImage = ai.defineFlow(
   }
 );
 
+// Import the checkOllamaStatus function from ollama.ts
+import { checkOllamaStatus as checkOllamaStatusFn } from '../ollama';
+
 // Check Ollama status flow
 export const checkOllamaStatus = ai.defineFlow(
   {
@@ -131,31 +127,6 @@ export const checkOllamaStatus = ai.defineFlow(
     }),
   },
   async () => {
-    try {
-      const response = await fetch(
-        `${process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434'}/api/tags`,
-        { method: 'GET', signal: AbortSignal.timeout(5000) }
-      );
-
-      if (!response.ok) {
-        throw new Error('Cannot connect to Ollama. Make sure it is running.');
-      }
-
-      const data = await response.json();
-      const models = data.models
-        ?.map((m: any) => m.name)
-        ?.filter((name: string) => Object.values(VISION_MODELS).includes(name as VisionModel)) || [];
-
-      return {
-        isRunning: true,
-        models,
-      };
-    } catch (error) {
-      return {
-        isRunning: false,
-        models: [],
-        error: 'Cannot connect to Ollama. Make sure it is running.',
-      };
-    }
+    return await checkOllamaStatusFn();
   }
 );

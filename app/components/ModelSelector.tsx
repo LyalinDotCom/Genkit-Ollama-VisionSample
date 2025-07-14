@@ -62,11 +62,25 @@ export function ModelSelector({ onModelSelect, currentModel }: ModelSelectorProp
     );
   }
 
+  const availableModels = models.filter(m => m.available);
+  const hasNoModels = availableModels.length === 0;
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
         Model
       </label>
+
+      {hasNoModels && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg mb-2">
+          <p className="text-sm text-red-800 dark:text-red-200">
+            No vision models found in Ollama. Install a model to get started:
+          </p>
+          <code className="block mt-1 p-2 bg-gray-900 dark:bg-gray-800 text-white rounded text-sm">
+            ollama pull llava:7b
+          </code>
+        </div>
+      )}
 
       <div className="relative">
         <button

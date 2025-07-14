@@ -1,80 +1,53 @@
-import { configureGenkit, genkit } from 'genkit';
+import { genkit } from 'genkit';
 import { ollama } from 'genkitx-ollama';
 
-// Supported vision models
-export const VISION_MODELS = {
-  LLAVA_7B: 'llava:7b',
-  LLAVA_13B: 'llava:13b',
-  LLAVA_34B: 'llava:34b',
-  GEMMA3_4B: 'gemma3:4b',
-  GEMMA3_12B: 'gemma3:12b',
-  GEMMA3_27B: 'gemma3:27b',
-} as const;
-
-export type VisionModel = (typeof VISION_MODELS)[keyof typeof VISION_MODELS];
-
-// Initialize Genkit with Ollama plugin and models
-export const ai = configureGenkit({
+// Initialize Genkit with Ollama plugin using new syntax
+export const ai = genkit({
   plugins: [
     ollama({
       serverAddress: process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434',
-      models: [
-        { name: VISION_MODELS.LLAVA_7B, type: 'generate' },
-        { name: VISION_MODELS.LLAVA_13B, type: 'generate' },
-        { name: VISION_MODELS.LLAVA_34B, type: 'generate' },
-        { name: VISION_MODELS.GEMMA3_4B, type: 'generate' },
-        { name: VISION_MODELS.GEMMA3_12B, type: 'generate' },
-        { name: VISION_MODELS.GEMMA3_27B, type: 'generate' },
-      ],
     }),
   ],
-  logLevel: 'debug',
-  enableTracingAndMetrics: true,
 });
 
-// Model metadata for UI
-export const MODEL_INFO = {
-  [VISION_MODELS.GEMMA3_4B]: {
-    name: 'Gemma 3 4B',
-    size: '3.3GB',
-    speed: 'Fast',
-    accuracy: 'Very Good',
-    description: 'Latest Google model with 128K context window',
-    recommended: true,
-  },
-  [VISION_MODELS.GEMMA3_12B]: {
-    name: 'Gemma 3 12B',
-    size: '8.1GB',
-    speed: 'Medium',
-    accuracy: 'Excellent',
-    description: 'Better accuracy for complex documents',
-  },
-  [VISION_MODELS.GEMMA3_27B]: {
-    name: 'Gemma 3 27B',
-    size: '17GB',
-    speed: 'Slow',
-    accuracy: 'Outstanding',
-    description: 'Highest accuracy for challenging layouts',
-  },
-  [VISION_MODELS.LLAVA_7B]: {
-    name: 'LLaVA 7B',
-    size: '4.1GB',
-    speed: 'Fast',
-    accuracy: 'Good',
-    description: 'Alternative vision model',
-  },
-  [VISION_MODELS.LLAVA_13B]: {
-    name: 'LLaVA 13B',
-    size: '7.3GB',
-    speed: 'Medium',
-    accuracy: 'Better',
-    description: 'LLaVA with improved accuracy',
-  },
-  [VISION_MODELS.LLAVA_34B]: {
-    name: 'LLaVA 34B',
-    size: '20GB',
-    speed: 'Slow',
-    accuracy: 'Best',
-    description: 'Largest LLaVA model',
-  },
+// Known vision model patterns - used for UI display hints
+const KNOWN_VISION_MODELS: Record<string, { name: string; description: string }> = {
+  'llava': { name: 'LLaVA', description: 'Efficient multimodal vision model' },
+  'llava-llama3': { name: 'LLaVA Llama 3', description: 'LLaVA with Llama 3 base' },
+  'llava-phi3': { name: 'LLaVA Phi 3', description: 'LLaVA with Phi 3 base' },
+  'bakllava': { name: 'BakLLaVA', description: 'Alternative LLaVA implementation' },
+  'llava-v1.6-mistral': { name: 'LLaVA v1.6 Mistral', description: 'LLaVA with Mistral base' },
+  'gemma3': { name: 'Gemma 3', description: 'Google\'s latest multimodal model with vision capabilities' },
+  'gemma': { name: 'Gemma', description: 'Google\'s multimodal model' },
+  'gemma2': { name: 'Gemma 2', description: 'Google\'s Gemma 2 model' },
+  'qwen2-vl': { name: 'Qwen2 VL', description: 'Qwen vision-language model' },
+  'minicpm-v': { name: 'MiniCPM-V', description: 'Efficient vision model' },
+  'llama3.2-vision': { name: 'Llama 3.2 Vision', description: 'Meta\'s vision model' },
+  'moondream': { name: 'Moondream', description: 'Lightweight vision model' },
 };
+
+// Helper to get friendly model info
+export function getModelDisplayInfo(modelId: string): { name: string; description: string } {
+  // Check for exact match
+  if (KNOWN_VISION_MODELS[modelId]) {
+    return KNOWN_VISION_MODELS[modelId];
+  }
+  
+  // Check for prefix match (e.g., "llava:7b" matches "llava")
+  const baseModel = modelId.split(':')[0];
+  if (KNOWN_VISION_MODELS[baseModel]) {
+    const size = modelId.split(':')[1];
+    return {
+      name: `${KNOWN_VISION_MODELS[baseModel].name} ${size?.toUpperCase() || ''}`.trim(),
+      description: KNOWN_VISION_MODELS[baseModel].description,
+    };
+  }
+  
+  // Default: capitalize and clean up the model ID
+  return {
+    name: modelId.split(':').map(part => 
+      part.charAt(0).toUpperCase() + part.slice(1)
+    ).join(' '),
+    description: 'Vision-capable model',
+  };
+}

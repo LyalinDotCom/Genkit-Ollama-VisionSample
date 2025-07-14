@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 const requestSchema = z.object({
-  model: z.string().optional().default('gemma3:4b'),
+  model: z.string(),
   imageBase64: z.string(),
   prompt: z.string(),
 });
@@ -15,6 +15,33 @@ export async function POST(request: NextRequest) {
     
     // Validate request
     const validatedData = requestSchema.parse(body);
+    
+    // Check if Ollama is running and model is available
+    const ollamaCheck = await fetch(
+      `${process.env.OLLAMA_SERVER_ADDRESS || 'http://127.0.0.1:11434'}/api/tags`,
+      { method: 'GET', signal: AbortSignal.timeout(5000) }
+    ).catch(() => null);
+    
+    if (!ollamaCheck || !ollamaCheck.ok) {
+      return NextResponse.json(
+        { error: 'Ollama is not running. Please start Ollama first.' },
+        { status: 503 }
+      );
+    }
+    
+    const ollamaData = await ollamaCheck.json();
+    const availableModels = ollamaData.models?.map((m: any) => m.name) || [];
+    
+    if (!availableModels.includes(validatedData.model)) {
+      return NextResponse.json(
+        { 
+          error: `Model ${validatedData.model} is not available in Ollama.`,
+          details: `Please run: ollama pull ${validatedData.model}`,
+          availableModels
+        },
+        { status: 400 }
+      );
+    }
     
     // Create a streaming response
     const encoder = new TextEncoder();
