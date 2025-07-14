@@ -1,13 +1,13 @@
 # Vision Text Extractor - Genkit + Ollama + Next.js
 
-A modern web application for extracting text from images using Google Genkit and Ollama vision models. This sample demonstrates how to build production-ready AI applications with local language models, optimized for developer laptops.
+A modern web application for extracting text from images using Google Genkit and vision models served by Ollama. This sample demonstrates how to build production-ready AI applications with local language models, optimized for developer laptops.
 
 ![Vision Text Extractor Screenshot](./public/screenshot.png)
 
 ## Features
 
 - 🖼️ **Multiple Input Methods**: Upload images via drag-and-drop, file selection, URL, or paste from clipboard
-- 🤖 **Multiple Vision Models**: Support for Gemma 3 (4B, 12B, 27B), LLaVA, and other Ollama vision models
+- 🤖 **Multiple Vision Models**: Support for Gemma 3 (4B, 12B, 27B), LLaVA, and other vision models available through Ollama
 - 🎨 **Modern UI**: Compact layout with side-by-side input/output, dark mode support
 - ⚡ **Real-time Streaming**: See results as they're generated with live updates
 - 🔧 **Customizable Prompts**: Pre-built templates for common use cases and custom prompt support
@@ -76,9 +76,8 @@ genkit-vision-nextjs/
 │   └── page.tsx           # Main application page
 ├── lib/
 │   ├── genkit/
-│   │   ├── ai.ts          # Genkit configuration
-│   │   ├── flows.ts       # Text extraction flow
-│   │   └── config.ts      # Model configurations
+│   │   ├── config.ts      # Genkit and model configurations
+│   │   └── flows.ts       # Text extraction flow
 │   └── utils.ts           # Utility functions
 └── public/                # Static assets
 ```
@@ -97,7 +96,7 @@ export const extractTextFromImage = ai.defineFlow({
   outputSchema: imageExtractionOutputSchema,
   streamSchema: z.string(),
 }, async (input, { sendChunk }) => {
-  // Direct Ollama API integration for vision models
+  // Call Ollama API directly for better control
 });
 ```
 
