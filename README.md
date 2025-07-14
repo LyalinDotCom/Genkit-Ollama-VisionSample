@@ -16,13 +16,7 @@ A modern web application for extracting text from images using Google Genkit and
 - 🔍 **Compact Image Preview**: Zoom and rotate images without excessive scrolling
 - 📌 **Sticky Results Panel**: Results stay visible while you adjust settings
 
-## What's New
 
-- ✅ **Gemma 3 27B Support**: Now supports the full Gemma 3 family (4B, 12B, 27B)
-- ✅ **Improved UI**: Compact layout prevents excessive scrolling, results always visible
-- ✅ **Default to Gemma 3**: Changed default model from LLaVA to Gemma 3 4B
-- ✅ **Better Confidence Display**: Fixed confidence level display from metadata
-- ✅ **Collapsible Prompt Section**: Advanced options hidden by default for cleaner UI
 
 ## Prerequisites
 
