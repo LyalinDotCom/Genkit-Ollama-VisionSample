@@ -136,6 +136,7 @@ This will:
 2.  **Encode the image:** Open a new terminal window, navigate into your `genkit-vision-nextjs` directory, and run the appropriate command for your system to encode the image and copy the resulting string to your clipboard:
     *   **macOS:** `base64 -i google_developer.png | pbcopy`
     *   **Linux:** `base64 google_developer.png | xclip -selection clipboard`
+    *   **Windows (PowerShell):** `$content = Get-Content -Path .\google_developer.png -Encoding Byte; [System.Convert]::ToBase64String($content) | Set-Clipboard`
 
 3.  **Run the flow:**
     1.  Navigate to the Genkit Developer UI at http://localhost:4000.
