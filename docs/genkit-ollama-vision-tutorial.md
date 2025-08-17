@@ -5,19 +5,20 @@ Learn how to build a local app that extracts text from images using locally serv
 ## Prerequisites
 
 - Node.js v18+ and npm
+- The Genkit command-line interface (CLI). Install it globally by running: `npm install -g genkit-cli`
 - [Ollama](https://ollama.com) installed and running locally
-- A vision model installed, for example: `ollama pull llava` or `ollama pull gemma2:2b`
+- A vision model installed, for example: `ollama pull llava:7b` or `ollama pull gemma2:2b`
 
 ## Part 1: Set Up the Core Genkit Flow
 
 ### Step 1: Initialize the project
 
 ```bash
-npx create-next-app@latest genkit-vision-nextjs --ts --use-npm --eslint
+npx create-next-app@latest genkit-vision-nextjs --ts --use-npm --eslint --no-tailwind --no-src-dir --app --import-alias="@/*" --yes
 cd genkit-vision-nextjs
 ```
 
-Accept the defaults when prompted (No to Tailwind, No to src directory, etc.)
+The command has been updated to automatically select the recommended defaults for this project.
 
 ### Step 2: Install Genkit dependencies
 
@@ -61,7 +62,7 @@ import { ollama } from 'genkitx-ollama';
 // Define input schema
 export const imageExtractionInput = z.object({
   imageBase64: z.string(),
-  model: z.string().default('llava'), // or your preferred model
+  model: z.string().default('llava:7b'), // IMPORTANT: Replace with your installed Ollama model, e.g., 'llava:7b' or 'gemma2:2b'
   prompt: z.string().optional().default('Extract all text from this image.'),
 });
 
@@ -130,24 +131,27 @@ This will:
 
 #### Testing in the Developer UI:
 
-1. Navigate to http://localhost:4000
-2. Click on **"Flows"** in the left sidebar
-3. Select **"extractTextFromImage"**
-4. In the input panel, provide a JSON object with a base64 encoded image:
+1.  **Prepare the test image:** Copy the [`google_developer.png`](./google_developer.png) file (located in the same `docs` folder as this tutorial) into the root of your `genkit-vision-nextjs` project directory.
+
+2.  **Encode the image:** Open a new terminal window, navigate into your `genkit-vision-nextjs` directory, and run the appropriate command for your system to encode the image and copy the resulting string to your clipboard:
+    *   **macOS:** `base64 -i google_developer.png | pbcopy`
+    *   **Linux:** `base64 google_developer.png | xclip -selection clipboard`
+
+3.  **Run the flow:**
+    1.  Navigate to the Genkit Developer UI at http://localhost:4000.
+    2.  Click on **"Flows"** in the left sidebar.
+    3.  Select **"extractTextFromImage"**.
+    4.  In the input panel, paste the base64 string you copied into the `imageBase64` field. The JSON should look like this:
 
 ```json
 {
-  "imageBase64": "YOUR_BASE64_IMAGE_STRING_HERE",
-  "model": "llava",
+  "imageBase64": "PASTE_YOUR_BASE64_STRING_HERE",
+  "model": "your-installed-model-name", // e.g., "llava:7b",
   "prompt": "Extract all text from this image."
 }
 ```
 
-**Tip:** To quickly get a base64 string from an image:
-- On macOS/Linux: `base64 -i your-image.jpg | pbcopy`
-- Or use an online converter temporarily for testing
-
-5. Click **"Run"** and observe the extracted text in the output panel
+5.  Click **"Run"** and observe the extracted text in the output panel.
 
 Great! Your Genkit flow is working. Now let's build a user-friendly interface.
 
@@ -187,7 +191,7 @@ import { streamFlow } from '@genkit-ai/next/client';
 import type { extractTextFromImage } from '@/lib/genkit/flows';
 
 export default function HomePage() {
-  const [model, setModel] = useState('llava');
+  const [model, setModel] = useState('llava:7b'); // IMPORTANT: Set a default model you have installed
   const [prompt, setPrompt] = useState('Extract all text from this image.');
   const [output, setOutput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -276,7 +280,7 @@ export default function HomePage() {
                 border: '1px solid #ccc',
                 borderRadius: 4
               }}
-              placeholder="e.g., llava, gemma2:2b"
+              placeholder="e.g., llava:7b, gemma2:2b"
             />
           </label>
         </div>
@@ -383,7 +387,7 @@ npm run dev
 3. Try these testing approaches:
    - **Drag and drop**: Drag an image with text directly onto the drop zone
    - **File selection**: Click to browse and select an image
-   - **Different models**: Try changing the model (e.g., `llava`, `gemma2:2b`)
+   - **Different models**: Try changing the model (e.g., `llava:7b`, `gemma2:2b`)
    - **Custom prompts**: Modify the prompt for specific extraction needs
 
 4. Watch as the AI extracts text in real-time with streaming feedback!
@@ -422,7 +426,7 @@ curl http://localhost:11434/api/tags
 ollama list
 
 # Pull a vision model
-ollama pull llava
+ollama pull llava:7b
 ```
 
 **Build warnings:**
@@ -433,31 +437,6 @@ ollama pull llava
 - Smaller models (gemma2:2b) are faster but less accurate
 - Larger models (llava, gemma2:27b) provide better results
 - First run may be slow as Ollama loads the model
-
-## Next Steps
-
-Now that you have a working vision text extractor, you can:
-
-1. **Add more features:**
-   - Support for multiple images
-   - Batch processing
-   - Export extracted text to files
-   - History of extractions
-
-2. **Enhance the UI:**
-   - Add progress indicators
-   - Support paste from clipboard
-   - Add OCR-specific presets (receipts, documents, handwriting)
-
-3. **Optimize performance:**
-   - Implement caching for repeated extractions
-   - Add image preprocessing (resize, enhance contrast)
-   - Use different models based on image type
-
-4. **Extend the flow:**
-   - Add translation after extraction
-   - Summarize extracted text
-   - Extract structured data (tables, forms)
 
 ## Summary
 
